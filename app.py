@@ -9,6 +9,78 @@ from reportlab.lib.styles import getSampleStyleSheet
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
 ID = re.compile(r'^[A-Za-z0-9_-]{11}$')
+import hashlib
+import hmac
+
+AUTH_FLAG = os.environ.get('AUTH_ENABLED', 'true').strip().lower()
+if AUTH_FLAG not in ('true', 'false'):
+    raise RuntimeError('AUTH_ENABLED must be true or false.')
+
+AUTH_REQUIRED = AUTH_FLAG == 'true'
+AUTH_USER = os.environ.get('APP_USERNAME', '')
+AUTH_PASSWORD = os.environ.get('APP_PASSWORD', '')
+
+def credential_digest(value):
+    return hashlib.sha256(value.encode('utf-8')).digest()
+
+@app.before_request
+def require_sign_in():
+    if request.path in ('/health', '/sw.js'):
+        return None
+    if not AUTH_REQUIRED:
+        return None
+
+    if (
+        not AUTH_USER.strip()
+        or not AUTH_PASSWORD.strip()
+        or ':' in AUTH_USER
+    ):
+        return jsonify(
+            error='Configure APP_USERNAME and APP_PASSWORD in Render.'
+        ), 503
+
+    credentials = request.authorization
+    if credentials and credentials.type.lower() == 'basic':
+        user_ok = hmac.compare_digest(
+            credential_digest(credentials.username or ''),
+            credential_digest(AUTH_USER)
+        )
+        password_ok = hmac.compare_digest(
+            credential_digest(credentials.password or ''),
+            credential_digest(AUTH_PASSWORD)
+        )
+        if user_ok and password_ok:
+            return None
+
+    response = jsonify(error='Sign in to access Player 2.')
+    response.status_code = 401
+    response.headers['WWW-Authenticate'] = (
+        'Basic realm="YouTube Playlist Transcript Player", charset="UTF-8"'
+    )
+    return response
+
+@app.after_request
+def prevent_private_caching(response):
+    if AUTH_REQUIRED or request.path == '/sw.js':
+        response.headers['Cache-Control'] = 'no-store'
+        response.vary.add('Authorization')
+    return response
+
+@app.get('/sw.js')
+def private_service_worker():
+    source = """
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    for (const key of await caches.keys()) await caches.delete(key);
+    await self.clients.claim();
+  })());
+});
+self.addEventListener('fetch', event => {
+  event.respondWith(fetch(event.request));
+});
+"""
+    return app.response_class(source, mimetype='application/javascript')
 
 class TimedSession(Session):
     def request(self, *args, **kwargs):
