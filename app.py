@@ -117,7 +117,7 @@ def transcript(video_id):
 
     except Exception:
         return jsonify(error='Transcript retrieval failed. Please try again.'), 502
-
+@app.post('/api/export')
 def export():
     try:
         body = request.get_json(); cues = validate_cues(body['cues'])
