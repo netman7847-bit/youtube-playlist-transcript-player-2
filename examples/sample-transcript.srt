@@ -1,0 +1,11 @@
+1
+00:00:01,250 --> 00:00:04,000
+This is a sample imported transcript, not the video's real captions.
+
+2
+00:05:00,000 --> 00:05:05,000
+Try searching for this sample sentence.
+
+3
+00:30:00,000 --> 00:30:05,000
+This line begins in the second thirty-minute segment.
