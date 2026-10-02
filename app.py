@@ -40,25 +40,84 @@ def health(): return {'status': 'ok', 'application': 'YouTube Playlist Transcrip
 
 @app.get('/api/transcript/<video_id>')
 def transcript(video_id):
-    if not ID.fullmatch(video_id): return jsonify(error='Invalid YouTube video ID.'), 400
+    if not ID.fullmatch(video_id):
+        return jsonify(error='Invalid YouTube video ID.'), 400
+
     language = request.args.get('language', 'en')
-    if not re.fullmatch(r'[a-zA-Z-]{2,15}', language): return jsonify(error='Invalid language code.'), 400
+    if not re.fullmatch(r'[a-zA-Z-]{2,15}', language):
+        return jsonify(error='Invalid language code.'), 400
+
+    key = os.environ.get('SUPADATA_API_KEY', '').strip()
+    if not key:
+        return jsonify(error='Add SUPADATA_API_KEY in Render Environment.'), 503
+
     try:
         with TimedSession() as session:
-            result = YouTubeTranscriptApi(http_client=session).fetch(video_id, languages=[language])
-            return jsonify(videoId=video_id, language=result.language, generated=result.is_generated, cues=result.to_raw_data())
-    except Exception as exc:
-        name = type(exc).__name__
-        messages = {
-            'RequestBlocked': 'YouTube blocked this server. Import an SRT or VTT file instead.',
-            'IpBlocked': 'YouTube blocked this server IP. Import an SRT or VTT file instead.',
-            'TranscriptsDisabled': 'This video has no accessible captions. Import an SRT or VTT file instead.',
-            'NoTranscriptFound': 'No captions were found in the selected language. Try another language or import subtitles.',
-            'VideoUnavailable': 'This video is unavailable.'
-        }
-        return jsonify(error=messages.get(name, 'Could not retrieve captions. Try again later or import an SRT/VTT file.'), code=name), 422
+            response = session.get(
+                'https://api.supadata.ai/v1/transcript',
+                params={
+                    'url': f'https://www.youtube.com/watch?v={video_id}',
+                    'mode': 'native',
+                    'text': 'false',
+                    'lang': language
+                },
+                headers={'x-api-key': key},
+                allow_redirects=False
+            )
 
-@app.post('/api/export')
+        messages = {
+            206: 'No existing captions are available. AI generation is disabled.',
+            202: 'Unexpected background job. No AI generation was requested.',
+            401: 'Supadata rejected the API key. Check Render Environment.',
+            402: 'Supadata says this request requires a different plan.',
+            403: 'Supadata cannot access this video. It may be restricted.',
+            404: 'Supadata could not find an accessible video.',
+            429: 'Supadata rate or credit limit reached. Check your usage.'
+        }
+
+        if response.status_code in messages:
+            status = 429 if response.status_code == 429 else 422
+            return jsonify(error=messages[response.status_code]), status
+
+        if response.status_code != 200:
+            return jsonify(error='The transcript provider returned an error.'), 502
+
+        data = response.json()
+        rows = data.get('content')
+        if not isinstance(rows, list) or not rows:
+            return jsonify(error='No timestamped captions were returned.'), 422
+
+        cues = []
+        for row in rows:
+            if not isinstance(row.get('text'), str):
+                raise ValueError('Invalid caption text')
+
+            for field in ('offset', 'duration'):
+                value = row.get(field)
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(value)
+                    or value < 0
+                ):
+                    raise ValueError('Invalid caption timing')
+
+            cues.append({
+                'start': row['offset'] / 1000,
+                'duration': row['duration'] / 1000,
+                'text': re.sub(r'\s+', ' ', row['text']).strip()
+            })
+
+        return jsonify(
+            videoId=video_id,
+            language=data.get('lang', language),
+            provider='Supadata',
+            cues=cues
+        )
+
+    except Exception:
+        return jsonify(error='Transcript retrieval failed. Please try again.'), 502
+
 def export():
     try:
         body = request.get_json(); cues = validate_cues(body['cues'])
