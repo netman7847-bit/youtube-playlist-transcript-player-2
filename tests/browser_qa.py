@@ -44,3 +44,4 @@ with sync_playwright() as p:
  assert page.evaluate("'serviceWorker' in navigator")
  print('Browser QA passed: add/remove, desktop drag, mobile reorder, selection, previous/next, ended auto-next, transcript isolation, search, segments, save/reload/load, subtitle import, seven downloads, 390/768/1440 layout, no JavaScript errors.')
  browser.close()
+

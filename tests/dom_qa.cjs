@@ -19,3 +19,4 @@ d.querySelector('[aria-label="Remove First"]').click();assert.equal(d.querySelec
 // fresh DOM should restore queue and saved playlists
 const fresh=new JSDOM(fs.readFileSync(base+'index.html','utf8'),{url:'http://localhost:3000',runScripts:'outside-only'});fresh.window.localStorage.setItem('yt-playlist-transcript-player:v1',w.localStorage.getItem('yt-playlist-transcript-player:v1'));fresh.window.eval(fs.readFileSync(base+'core.js','utf8'));fresh.window.eval(fs.readFileSync(base+'app.js','utf8'));assert.equal(fresh.window.document.querySelectorAll('.queue-item').length,2);assert.equal(fresh.window.document.getElementById('saved').options.length,2);
 console.log('DOM integration passed: add/remove, drag handlers, up/down, selection stability, previous/next, automatic next, explicit-only transcript fetch, search, sections, per-video transcript display, saved playlist reload/load.');w.close();fresh.window.close();})().catch(e=>{console.error(e);process.exit(1)});
+

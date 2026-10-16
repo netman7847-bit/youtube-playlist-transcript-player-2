@@ -22,3 +22,4 @@ function parseSubtitles(text){
 }
 const api={videoId,move,timestamp,parseSubtitles};if(typeof module!=='undefined')module.exports=api;else root.Core=api;
 })(typeof window!=='undefined'?window:globalThis);
+

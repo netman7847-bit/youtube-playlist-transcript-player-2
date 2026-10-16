@@ -44,3 +44,4 @@ def test_segments(client,minutes):
 
 def test_validation(client):
     for body in [{},{'format':'exe','cues':CUES},{'format':'txt','cues':[{'start':-1,'duration':0,'text':'bad'}]}]: assert client.post('/api/export',json=body).status_code==400
+

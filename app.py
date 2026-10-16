@@ -68,19 +68,11 @@ def prevent_private_caching(response):
 
 @app.get('/sw.js')
 def private_service_worker():
-    source = """
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', event => {
-  event.waitUntil((async () => {
-    for (const key of await caches.keys()) await caches.delete(key);
-    await self.clients.claim();
-  })());
-});
-self.addEventListener('fetch', event => {
-  event.respondWith(fetch(event.request));
-});
-"""
-    return app.response_class(source, mimetype='application/javascript')
+    return send_from_directory('public', 'sw.js', mimetype='application/javascript')
+
+@app.get('/offline/')
+def offline_workspace():
+    return send_from_directory('public/offline', 'index.html')
 
 class TimedSession(Session):
     def request(self, *args, **kwargs):
@@ -254,3 +246,4 @@ def export():
 def too_large(e): return jsonify(error='Request exceeds the 8 MB limit.'),413
 
 if __name__ == '__main__': app.run(host='0.0.0.0',port=int(os.environ.get('PORT',3000)))
+

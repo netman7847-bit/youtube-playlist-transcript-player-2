@@ -1,0 +1,1 @@
+{"id": "/offline/", "name": "Player 2 Offline Workspace", "short_name": "Player 2 Offline", "start_url": "/offline/", "scope": "/offline/", "display": "standalone", "background_color": "#0c1721", "theme_color": "#142638", "icons": [{"src": "/offline/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]}

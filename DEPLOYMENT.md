@@ -68,3 +68,4 @@ Localhost can be used for desktop installation testing. A plain HTTP LAN address
 - **App changes appear late:** Refresh with an internet connection. The service worker uses network-first refreshes for shell files.
 
 References: https://render.com/docs/deploy-flask and https://render.com/docs/blueprint-spec ; https://github.com/jdepoix/youtube-transcript-api ; https://developers.google.com/youtube/iframe_api_reference
+

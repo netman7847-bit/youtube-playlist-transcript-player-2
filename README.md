@@ -73,3 +73,9 @@ python tests/browser_qa.py
 ```
 
 The browser suite mocks YouTube's iframe API and transcript response so queue and transcript behavior can be tested repeatably. Real YouTube availability remains an external dependency. See TEST-REPORT.md for the actual checks performed with this package.
+
+
+## Offline workspace update
+
+See `OFFLINE-UPDATE-PLAYER2.md` for the separate local-media and offline Whisper workspace added under `/offline/`.
+
